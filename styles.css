@@ -1,16 +1,386 @@
+/* ============================================================================
+   Ink — a colour-naming game.
+
+   The one design rule everything else follows: the interface is achromatic.
+   Ground, type, borders, the clock, the score — all neutral graphite. The only
+   chroma anywhere on screen belongs to the game itself, which is what makes an
+   unlabelled swatch row read as "pick a colour" in the second before anyone
+   has been told anything. An accent colour in the chrome would compete with
+   the mechanic for the player's eye, so there isn't one.
+   ============================================================================ */
+
+:root {
+  --ground: #191b1f;
+  --ground-lift: #212429;
+  --edge: #2f343d;
+  --ash: #757c89;
+  --chalk: #e9ebee;
+
+  --ink: #757c89; /* the round's colour, set from JS */
+
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
-  padding: 2rem;
-  font-family: system-ui, sans-serif;
-  line-height: 1.6;
-  color: #1a1a1a;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100svh;
+  background: var(--ground);
+  color: var(--chalk);
+  font-family: var(--display);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
-main {
-  max-width: 40rem;
-  margin: 0 auto;
+/* The answer flash: the screen itself reports the verdict. A correct answer
+   blooms the round's ink from the centre, which is the whole tutorial — you
+   learn that the ink was the answer by seeing the ink agree with you. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  /* --flash is the ink of the round just answered, which is not the same as
+     --ink: by the time the flash runs, the next round has already been dealt. */
+  background: radial-gradient(circle at 50% 45%, var(--flash, var(--ink)) 0%, transparent 62%);
+  transition: opacity 420ms ease-out;
 }
 
-a {
-  color: #0b5fff;
+body.is-correct::after {
+  opacity: 0.34;
+  transition-duration: 90ms;
+}
+
+body.is-wrong {
+  animation: jolt 240ms ease-in-out;
+}
+
+@keyframes jolt {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-9px);
+  }
+  75% {
+    transform: translateX(9px);
+  }
+}
+
+/* --- the clock ----------------------------------------------------------- */
+
+.clock {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 7px;
+  background: var(--ground-lift);
+  z-index: 4;
+}
+
+.clock__fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(var(--fill, 1));
+  background: var(--chalk);
+  transition:
+    transform 120ms linear,
+    background-color 200ms ease;
+}
+
+/* Under three seconds the bar stops being neutral. It is the only moment the
+   chrome is allowed any colour, and it costs the player nothing to learn. */
+.clock--urgent .clock__fill {
+  background: #ff3b3b;
+  animation: throb 600ms ease-in-out infinite;
+}
+
+@keyframes throb {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* --- masthead ------------------------------------------------------------ */
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: calc(var(--gutter) * 0.9) var(--gutter) 0;
+}
+
+.masthead nav {
+  line-height: 1;
+}
+
+.wordmark {
+  color: var(--ash);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.wordmark:hover,
+.wordmark:focus-visible {
+  color: var(--chalk);
+}
+
+.wordmark h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  font-variation-settings: "wdth" 108;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+}
+
+.tally {
+  margin: 0;
+  font-family: var(--data);
+  font-size: 1rem;
+  color: var(--ash);
+  font-variant-numeric: tabular-nums;
+}
+
+.tally__score {
+  color: var(--chalk);
+  font-weight: 700;
+}
+
+/* --- the field ----------------------------------------------------------- */
+
+.field {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  justify-items: center;
+  padding: 0 var(--gutter) calc(var(--gutter) * 1.4);
+  min-height: 0;
+}
+
+.word {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(3.5rem, 19vw, 12rem);
+  font-weight: 900;
+  font-variation-settings: "wdth" 118;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  text-transform: uppercase;
+  text-align: center;
+  user-select: none;
+  transition: color 90ms ease;
+}
+
+/* --- the swatches -------------------------------------------------------- */
+
+.swatches {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: clamp(0.6rem, 2.4vw, 1.4rem);
+  flex-wrap: nowrap;
+  width: 100%;
+  max-width: 46rem;
+}
+
+.swatch {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ash);
+}
+
+.swatch__chip {
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  border-radius: 14px;
+  background: var(--chip);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--chip) 70%, transparent);
+  transition:
+    transform 140ms cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 200ms ease;
+}
+
+.swatch:hover .swatch__chip,
+.swatch:focus-visible .swatch__chip {
+  transform: translateY(-6px);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--chip) 26%, transparent);
+}
+
+.swatch:active .swatch__chip {
+  transform: translateY(-1px) scale(0.97);
+}
+
+.swatch:focus-visible {
+  outline: none;
+}
+
+.swatch:focus-visible .swatch__chip {
+  outline: 2px solid var(--chalk);
+  outline-offset: 6px;
+}
+
+.swatch__key {
+  font-family: var(--data);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  opacity: 0.55;
+}
+
+/* No keyboard, no keycaps. On touch the chip is the whole affordance. */
+@media (pointer: coarse) {
+  .swatch__key {
+    display: none;
+  }
+
+  .swatch__chip {
+    aspect-ratio: 1 / 1;
+    border-radius: 18px;
+  }
+}
+
+/* The opening board breathes until someone moves: a still screen with a
+   colour word and three colours reads as a picture, and a moving one reads as
+   a thing you can touch. */
+body.is-ready .swatch__chip {
+  animation: breathe 2.4s ease-in-out infinite;
+  animation-delay: var(--beat, 0ms);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.62;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+/* After a few seconds of nobody moving, the answer shows itself. Losing the
+   first round to a shrug is worse than giving it away once. */
+body.is-ready .swatch--hint .swatch__chip {
+  animation-duration: 1s;
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--chip) 30%, transparent);
+}
+
+/* --- the ending ---------------------------------------------------------- */
+
+.verdict {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2rem;
+  background: color-mix(in srgb, var(--ground) 88%, transparent);
+  backdrop-filter: blur(7px);
+  animation: settle 420ms ease-out;
+}
+
+.verdict[hidden] {
+  display: none;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+  }
+}
+
+.verdict__score {
+  margin: 0;
+  font-family: var(--data);
+  font-size: clamp(5rem, 24vw, 13rem);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk);
+}
+
+.verdict__again {
+  width: 4.5rem;
+  height: 4.5rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--edge);
+  border-radius: 50%;
+  background: var(--ground-lift);
+  color: var(--ash);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+
+.verdict__again svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.verdict__again:hover,
+.verdict__again:focus-visible {
+  color: var(--chalk);
+  border-color: var(--chalk);
+  transform: rotate(-40deg);
+}
+
+/* --- the floor ----------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* The breathe animation carried the "you can touch this" message, so with
+     motion off the opening board says it with contrast instead. */
+  body.is-ready .swatch__chip {
+    opacity: 1;
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--chip) 26%, transparent);
+  }
+}
+
+@media (max-width: 34rem) {
+  .field {
+    grid-template-rows: 1fr auto;
+    padding-bottom: calc(var(--gutter) * 2);
+  }
+
+  .swatches {
+    gap: 0.7rem;
+  }
 }

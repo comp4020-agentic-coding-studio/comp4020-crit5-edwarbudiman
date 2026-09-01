@@ -77,6 +77,17 @@ describe("sensor: the interface explains nothing", () => {
   }
 });
 
+/** Markdown prose with code stripped out. A filename or a shell command is an
+ *  identifier, not an explanation — `spec/no-instructions.test.ts` named in a
+ *  file list is exactly the kind of match that would otherwise make this
+ *  sensor cry wolf, and a sensor that cries wolf gets deleted. */
+function prose(markdown: string): string {
+  return markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/\]\([^)]*\)/g, "] ");
+}
+
 describe("sensor: the README doesn't stand in for the interface", () => {
   const readme = resolve("README.md");
 
@@ -86,8 +97,8 @@ describe("sensor: the README doesn't stand in for the interface", () => {
 
   for (const pattern of TUTORIAL) {
     it(`carries no tutorial copy matching ${pattern}`, () => {
-      const prose = readFileSync(readme, "utf8");
-      expect(prose.match(pattern)?.[0], "explaining it in the repo is still explaining it").toBe(
+      const text = prose(readFileSync(readme, "utf8"));
+      expect(text.match(pattern)?.[0], "explaining it in the repo is still explaining it").toBe(
         undefined,
       );
     });

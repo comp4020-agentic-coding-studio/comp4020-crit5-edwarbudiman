@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BONUS_FLOOR_MS,
   answer,
+  bonusFor,
   createGame,
   optionCountFor,
   start,
@@ -91,13 +92,16 @@ describe("solving buys time", () => {
   });
 
   it("pays less for each answer as the score climbs", () => {
+    // Assert the payout curve itself rather than two observed time deltas: the
+    // clock is capped, so a delta comparison can pass on the cap alone and
+    // would keep passing if the decay were deleted.
+    expect(bonusFor(20)).toBeLessThan(bonusFor(0));
+    expect(bonusFor(200)).toBe(BONUS_FLOOR_MS);
+  });
+
+  it("is still paying out on the very first answer", () => {
     const early = playPerfectly(0);
-    const late = playPerfectly(20);
-
-    const earlyGain = answer(early, early.round.ink).game.timeMs - early.timeMs;
-    const lateGain = answer(late, late.round.ink).game.timeMs - late.timeMs;
-
-    expect(lateGain).toBeLessThan(earlyGain);
+    expect(answer(early, early.round.ink).game.timeMs).toBeGreaterThan(early.timeMs);
   });
 });
 

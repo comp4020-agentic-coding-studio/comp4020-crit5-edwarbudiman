@@ -1,67 +1,38 @@
-# COMP4020 static prototype template
+# Ink
 
-A starter template for static-site prototypes in **COMP4020 / COMP8020 Agentic
-Coding Studio**. The course provisions a repo from this template for each
-deliverable --- you don't create it yourself. The `start` course skill clones it
-for you; from there, build your prototype and deploy it to GitHub Pages.
+A small browser game for COMP4020 crit 5. Static HTML, CSS and TypeScript on
+Vite, deployed to GitHub Pages.
 
-## CI and Pages only turn on when you ship
+The deployed site is the deliverable. This file is for whoever opens the repo,
+and it deliberately says nothing about what to do on the screen — the brief
+forbids explaining the game anywhere, and a README that quietly did the
+teaching would be the loophole rather than the answer. `spec/` is where the
+promises live.
 
-Your repo starts private, and both CI jobs (`check` and `deploy`) are gated on
-it being public. While private, a push to `main` runs nothing in CI ---
-`pnpm check` (below) is your feedback loop until then. When you're ready, the
-course's `/ship` skill flips the repo public, turns on GitHub Pages, and
-dispatches the deploy for you; there's nothing to configure in the Pages
-settings yourself. From that point, every push to `main` builds and deploys, and
-the deploy step prints your live URL and checks it returns 200.
-
-## What gets marked
-
-The deployed site is the deliverable, assessed live in Chrome at two fixed
-viewports --- see the course website's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#marking-environment)
-for the details.
-
-## Quick start
+## Running it
 
 ```sh
-mise install       # supported path: install the template's Node and pnpm
-pnpm install
-pnpm dev             # local dev server
-pnpm check           # most of what CI runs (links, secrets and deploy are CI-only)
-pnpm check:evidence  # the process-evidence check CI runs before you ship
-pnpm build           # produce dist/ (what gets deployed)
-
-# reproduce CI's links check before you push
-pnpm dlx linkinator ./dist --silent --skip "^https?://(?!localhost|127)"
+mise install                # the Node and pnpm this repo is pinned to
+mise exec -- pnpm install   # a bare `pnpm` may resolve to an older major
+mise exec -- pnpm dev       # local dev server
+mise exec -- pnpm check     # typecheck, build, tests
+mise exec -- pnpm check:evidence
 ```
 
-`mise` is the course's recommended runtime manager. If you use another manager
-or the official installers, that is fine: provide the Node and pnpm versions in
-`mise.toml`, then run the same commands. Tutor support reproduces runtime
-problems with mise.
+## What's where
 
-## What's here
-
-- `index.html`, `styles.css`, `main.ts` --- a minimal starting site. Replace it.
-- `mise.toml` --- the tested Node and pnpm versions for this template.
-- `spec/` --- what the checks are for (`README.md`) and the shipped invariants
-  (`invariants.test.ts`); the spec tests you write live alongside them.
-- `CLAUDE.md` --- orients whoever works in this repo, you or a coding agent.
-  Yours to grow.
-- `PROCESS.md` --- a template for your process overview, showing the
-  cited-moment format. Replace it with your own; `pnpm check:evidence` verifies
-  your citations resolve.
-- `.github/workflows/checks.yml` --- the CI sensors that run on every push once
-  your repo is public, and the GitHub Pages deploy.
-- `.githooks/pre-commit` --- blocks any commit that contains something shaped
-  like an API key, so your COMP4020 key can't end up in a public repo. Installed
-  automatically by `pnpm install`.
-
-This template is SSG-agnostic: plain HTML/CSS/TypeScript on Vite, so you can add
-Astro, Eleventy, or any static generator later without changing how it deploys.
-The course plugin's `stack` skill performs the swap for you — to the course
-default (Astro) or bare HTML/CSS — with the Pages base path, lockfile, and CI
-link check handled.
-
-See the course site for how the checks map to each week of the course.
+- `game.ts` — every rule, with no DOM. Pure functions in and out, so a round can
+  be played in a test without a browser.
+- `main.ts` — render and input only. Turns a `Game` into pixels and a keypress
+  into an answer.
+- `audio.ts` — Web Audio tones. Each one reports a state rather than decorating
+  a moment.
+- `styles.css` — the interface is achromatic on purpose; the only chroma on
+  screen belongs to the game.
+- `spec/game.test.ts` — the contract tests for this week's published spec. They
+  retire with the brief.
+- `spec/no-instructions.test.ts` — a sensor, not a contract. It reads the built
+  page and this file, and it carries forward.
+- `spec/invariants.test.ts` — shipped with the template; true of any good site.
+- `PROCESS.md`, `reflections/crit-5.md` — the process record and the week's
+  reflection.
