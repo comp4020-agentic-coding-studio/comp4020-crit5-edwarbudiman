@@ -196,6 +196,42 @@ body.is-wrong {
   animation: drift 5.5s ease-in-out infinite;
 }
 
+/* The strobe: the panel beats between two hues instead of flashing on and
+   off. Deliberately NOT a luminance strobe — both tints are dark mixes into
+   the same ground, so the brightness swing is small, and at 2Hz it sits under
+   the three-flashes-a-second line that exists because strobing backgrounds
+   trigger seizures. It is meant to pull your eye, not to hurt anyone. */
+.stage--strobe {
+  animation: strobe 500ms steps(1, end) infinite;
+}
+
+@keyframes strobe {
+  0%,
+  49% {
+    background-color: var(--panel);
+    box-shadow: 0 0 0 0 var(--panel-alt, var(--panel));
+    border-radius: 20px;
+  }
+  50%,
+  100% {
+    background-color: var(--panel-alt, var(--panel));
+    /* The ring snapping in and out is what actually pulls the eye — hue alone
+       is too polite at an 18% tint to distract anyone. It rides on box-shadow
+       rather than transform so it can run alongside the drift, which owns
+       transform. */
+    box-shadow: 0 0 0 16px var(--panel);
+    border-radius: 4px;
+  }
+}
+
+/* Both at once: the drift keeps its own transform animation and the strobe
+   rides on background-color, so they compose rather than cancel. */
+.stage--drift.stage--strobe {
+  animation:
+    drift 5.5s ease-in-out infinite,
+    strobe 500ms steps(1, end) infinite;
+}
+
 @keyframes drift {
   0%,
   100% {
@@ -510,6 +546,16 @@ body.is-ready .swatch--hint .swatch__chip {
   .stage--drift {
     animation: none;
     transform: translate(-9px, 5px) rotate(-0.8deg);
+  }
+
+  /* The strobe is the one layer that must stop outright rather than degrade.
+     Reduced motion is the setting a photosensitive player has already found,
+     and a beating background is exactly what it is there to prevent. The
+     panel settles on its second hue so the round still looks different. */
+  .stage--strobe,
+  .stage--drift.stage--strobe {
+    animation: none;
+    background-color: var(--panel-alt, var(--panel));
   }
 }
 

@@ -23,6 +23,7 @@ import {
   start,
   tick,
 } from "../game";
+import { SAFE_DISTANCE, worstCaseDistance } from "../cvd";
 import { KEEP, mergeScore } from "../scores";
 
 // CONTRACT TESTS — they answer crit 5's published spec ("A game") and retire
@@ -266,8 +267,9 @@ describe("difficulty arrives in layers", () => {
     // The first letter carries most of a word's shape. Hiding it turns reading
     // into guessing, which is a different game.
     const table = [{ id: "letters" as const, from: 0, enabled: true }];
-    for (let i = 0; i < 80; i++) {
-      const round = dealRound(0, seeded(100 + i), table);
+    const rng = seeded(6);
+    for (let i = 0; i < 300; i++) {
+      const round = dealRound(0, rng, table);
       for (const index of round.hidden) {
         expect(index).toBeGreaterThan(0);
         expect(index).toBeLessThan(round.word.length);
@@ -277,28 +279,110 @@ describe("difficulty arrives in layers", () => {
   });
 });
 
-describe("sensor: the panel layer stays readable", () => {
-  // A difficulty layer that makes the word unreadable is not difficulty, it is
-  // a bug. This one is measured, not eyeballed.
-  it("clears the contrast floor for every ink on every panel", () => {
-    for (const ink of COLORS) {
-      for (const panel of COLORS) {
-        if (ink === panel) continue;
-        const ratio = contrast(INK[ink], panelColor(panel));
-        expect(ratio, `${ink} on a ${panel} panel is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(
-          MIN_PANEL_CONTRAST,
-        );
+describe("sensor: nobody is asked to guess", () => {
+  // Around 8% of men have a red-green deficiency — more people than will ever
+  // see this at a crit. A palette that collapses for them doesn't make the
+  // game harder, it makes it a coin toss, and no amount of playing it myself
+  // would ever have caught that. This is measured instead.
+  it("keeps every dealt board separable under all four vision models", () => {
+    let worst = { pair: "", distance: Infinity, board: [] as string[] };
+
+    const rng = seeded(1);
+    for (let draw = 0; draw < 500; draw++) {
+      for (let score = 0; score < 40; score += 7) {
+        const { options } = dealRound(score, rng);
+        for (let i = 0; i < options.length; i++) {
+          for (let j = i + 1; j < options.length; j++) {
+            const gap = worstCaseDistance(INK[options[i]], INK[options[j]]);
+            if (gap < worst.distance) {
+              worst = { pair: `${options[i]}/${options[j]}`, distance: gap, board: [...options] };
+            }
+          }
+        }
       }
+    }
+
+    expect(
+      worst.distance,
+      `${worst.pair} on board [${worst.board.join(", ")}] is ${worst.distance.toFixed(1)} apart`,
+    ).toBeGreaterThanOrEqual(SAFE_DISTANCE);
+  });
+
+  it("never puts the decoy word's colour beside an ink it could be mistaken for", () => {
+    const rng = seeded(2);
+    for (let draw = 0; draw < 500; draw++) {
+      const round = dealRound(0, rng);
+      if (round.word === round.ink) continue;
+      expect(
+        worstCaseDistance(INK[round.word], INK[round.ink]),
+        `${round.word} in ${round.ink} ink`,
+      ).toBeGreaterThanOrEqual(SAFE_DISTANCE);
     }
   });
 
-  it("would fail at full saturation, which is why the panel is a tint", () => {
-    // Documents the finding rather than trusting it: at tint 1 the six colours
-    // sit at such similar luminance that not one pair is legible.
-    const legible = COLORS.flatMap((ink) =>
-      COLORS.filter((p) => p !== ink && contrast(INK[ink], panelColor(p, 1)) >= MIN_PANEL_CONTRAST),
+  it("would have failed on the palette this replaced", () => {
+    // Documents the finding rather than trusting it. Under deuteranopia the
+    // original blue and purple were 6.8 apart, which is indistinguishable.
+    const BEFORE = { blue: "#3D8BFF", purple: "#B06BFF" };
+    expect(worstCaseDistance(BEFORE.blue, BEFORE.purple)).toBeLessThan(10);
+    expect(worstCaseDistance(INK.blue, INK.purple)).toBeGreaterThanOrEqual(SAFE_DISTANCE);
+  });
+
+  it("leaves enough of the palette usable to still deal a varied board", () => {
+    // The guarantee is worthless if it collapses the game to one board.
+    const boards = new Set<string>();
+    const rng = seeded(3);
+    for (let draw = 0; draw < 500; draw++) {
+      boards.add([...dealRound(0, rng).options].sort().join("/"));
+    }
+    expect(boards.size, `only dealt: ${[...boards].join("  ")}`).toBeGreaterThan(6);
+  });
+});
+
+describe("sensor: the panel layer stays readable", () => {
+  // A difficulty layer that makes the word unreadable is not difficulty, it is
+  // a bug. This one is measured, not eyeballed.
+  it("clears the contrast floor for every panel actually dealt", () => {
+    // The check moved from "every combination" to "every combination the game
+    // can deal" when the palette changed: not all pairs are legible, so the
+    // dealer filters them, and asserting the theoretical grid would fail on
+    // boards no player can ever be shown.
+    const table = [{ id: "panel" as const, from: 0, enabled: true }];
+
+    const rng = seeded(4);
+    for (let draw = 0; draw < 500; draw++) {
+      const round = dealRound(0, rng, table);
+      if (!round.panel) continue;
+      const ratio = contrast(INK[round.ink], panelColor(round.panel));
+      expect(
+        ratio,
+        `${round.ink} word on a ${round.panel} panel is ${ratio.toFixed(2)}:1`,
+      ).toBeGreaterThanOrEqual(MIN_PANEL_CONTRAST);
+    }
+  });
+
+  it("still gives every ink a panel, so the layer doesn't quietly skip a colour", () => {
+    const table = [{ id: "panel" as const, from: 0, enabled: true }];
+    const withPanel = new Set<string>();
+
+    const rng = seeded(5);
+    for (let draw = 0; draw < 500; draw++) {
+      const round = dealRound(0, rng, table);
+      if (round.panel) withPanel.add(round.ink);
+    }
+
+    expect([...withPanel].sort()).toEqual([...COLORS].sort());
+  });
+
+  it("is a tint because full saturation mostly fails", () => {
+    // Documents the finding rather than trusting it: at tint 1 the colours sit
+    // at close enough luminance that almost nothing is legible on anything.
+    const pairs = COLORS.flatMap((ink) => COLORS.filter((p) => p !== ink).map((p) => [ink, p]));
+    const legible = pairs.filter(
+      ([ink, p]) => contrast(INK[ink], panelColor(p, 1)) >= MIN_PANEL_CONTRAST,
     );
-    expect(legible).toHaveLength(0);
+
+    expect(legible.length / pairs.length).toBeLessThan(0.15);
     expect(PANEL_TINT).toBeLessThan(0.2);
   });
 });

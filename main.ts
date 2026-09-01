@@ -159,7 +159,12 @@ function render(): void {
   renderWord();
   document.body.style.setProperty("--ink", INK[round.ink]);
   stageEl.style.setProperty("--panel", round.panel ? panelColor(round.panel) : "transparent");
+  stageEl.style.setProperty(
+    "--panel-alt",
+    round.panelAlt ? panelColor(round.panelAlt) : "transparent",
+  );
   stageEl.classList.toggle("stage--drift", layers.has("drift"));
+  stageEl.classList.toggle("stage--strobe", Boolean(round.panelAlt));
   scoreEl.textContent = String(score);
 
   clockEl.style.setProperty("--fill", String(timeMs / MAX_MS));

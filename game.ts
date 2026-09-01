@@ -3,20 +3,37 @@
 // without a browser, and the render layer can be rewritten without touching a
 // rule.
 
+import { confusable, worstCaseDistance } from "./cvd";
+
 export type ColorId = "red" | "orange" | "yellow" | "green" | "blue" | "purple";
 
 export const COLORS: readonly ColorId[] = ["red", "orange", "yellow", "green", "blue", "purple"];
 
 /** The ink each name is painted in. Saturated and far apart, so the swatch a
  *  player reaches for is never a judgement call about hue — the difficulty
- *  belongs to the word fighting the colour, not to telling two blues apart. */
+ *  belongs to the word fighting the colour, not to telling two blues apart.
+ *
+ *  Measured, not picked. The first palette looked right and measured badly:
+ *  under deuteranopia — the commonest deficiency — blue and purple sat 6.8
+ *  apart in Lab, which is not a colour choice, it is a coin toss. Purple is
+ *  now lifted well clear of blue in lightness, which is the one channel a
+ *  red-green deficiency leaves intact.
+ *
+ *  Two pairs still measure close (red/orange, orange/yellow) and no vivid,
+ *  nameable palette fixes that — hues that adjacent can only be separated by
+ *  pushing one of them so pale it stops reading as its own name, and here the
+ *  word IS the colour name, so a peach labelled ORANGE is worse than any
+ *  collision. Solving it in the palette also failed a second way: the search
+ *  drove every colour light enough that red had no legible panel left at all.
+ *  So the guarantee lives in `dealRound` instead — only three of the six are
+ *  ever on screen, and a confusable pair is simply never dealt together. */
 export const INK: Record<ColorId, string> = {
-  red: "#FF3B3B",
-  orange: "#FF8A1E",
-  yellow: "#FFD400",
-  green: "#25C46A",
-  blue: "#3D8BFF",
-  purple: "#B06BFF",
+  red: "#FF4136",
+  orange: "#FF9F1C",
+  yellow: "#FFE14D",
+  green: "#2ECC71",
+  blue: "#2B7FFF",
+  purple: "#C89BFF",
 };
 
 export const GROUND = "#191B1F";
@@ -70,7 +87,7 @@ export function drainRateFor(score: number): number {
 
 /* --- difficulty layers ---------------------------------------------------- */
 
-export type LayerId = "glitch" | "panel" | "letters" | "drift";
+export type LayerId = "glitch" | "panel" | "letters" | "drift" | "strobe";
 
 export interface Layer {
   id: LayerId;
@@ -90,6 +107,9 @@ export const LAYERS: Layer[] = [
   { id: "panel", from: 6, enabled: true },
   { id: "letters", from: 7, enabled: true },
   { id: "drift", from: 8, enabled: true },
+  // Needs `panel` to be on as well — it beats that rectangle between two
+  // hues, so on its own it has nothing to drive.
+  { id: "strobe", from: 9, enabled: true },
 ];
 
 export function activeLayers(score: number, table: Layer[] = LAYERS): Set<LayerId> {
@@ -148,6 +168,8 @@ export interface Round {
   options: ColorId[];
   /** The tinted rectangle behind the word, once that layer is on. */
   panel: ColorId | null;
+  /** The second tint the panel beats between, once the strobe layer is on. */
+  panelAlt: ColorId | null;
   /** Indices of letters hidden from the word, once that layer is on. */
   hidden: number[];
 }
@@ -187,23 +209,73 @@ export function dealRound(score: number, rng: () => number, table: Layer[] = LAY
 
   const ink = pick(COLORS, rng);
   const congruent = rng() < 0.2;
-  const word = congruent ? ink : pick(COLORS.filter((c) => c !== ink), rng);
+  // The word is forced onto the board as the decoy, so it has to clear the
+  // same bar as any other swatch — picking it before checking would smuggle a
+  // confusable pair past the filter below.
+  const legible = COLORS.filter((c) => c !== ink && !confusable(INK[c], INK[ink]));
+  const word = congruent || legible.length === 0 ? ink : pick(legible, rng);
 
   const options: ColorId[] = [ink];
   if (word !== ink) options.push(word);
 
-  const rest = COLORS.filter((c) => !options.includes(c));
-  for (const c of shuffle(rest, rng)) {
+  // Only three of the six are ever on screen, so the palette doesn't have to
+  // be globally separable — the BOARD does. Two colours that a colour-blind
+  // player could confuse simply never get dealt together, which keeps the
+  // palette vivid and still leaves thirteen of the twenty possible boards.
+  //
+  // The test has to be against what's on the board SO FAR, not against the
+  // board we started with: on a congruent round the word adds nothing, both
+  // remaining slots get filled from the same list, and a pair that is fine
+  // beside the ink can still be confusable with each other.
+  const remaining = shuffle(
+    COLORS.filter((c) => !options.includes(c)),
+    rng,
+  );
+
+  for (const c of remaining) {
     if (options.length >= OPTION_COUNT) break;
-    options.push(c);
+    if (options.every((chosen) => !confusable(INK[c], INK[chosen]))) options.push(c);
+  }
+
+  // Only reachable if someone edits INK into a palette that can't fill a safe
+  // board at all. Take the least-bad colour rather than the next one in line,
+  // so a broken palette degrades instead of dealing the worst possible pair.
+  while (options.length < OPTION_COUNT) {
+    const left = remaining.filter((c) => !options.includes(c));
+    const safest = left.reduce((best, c) =>
+      Math.min(...options.map((o) => worstCaseDistance(INK[c], INK[o]))) >
+      Math.min(...options.map((o) => worstCaseDistance(INK[best], INK[o])))
+        ? c
+        : best,
+    );
+    options.push(safest);
   }
 
   // The panel is a third colour where one is available: two colours to hold
   // apart is the load, so reusing the ink or the word wastes the layer.
   let panel: ColorId | null = null;
+  let panelAlt: ColorId | null = null;
   if (on.has("panel")) {
-    const thirds = COLORS.filter((c) => c !== ink && c !== word);
-    panel = pick(thirds.length ? thirds : COLORS.filter((c) => c !== ink), rng);
+    // A panel the word can't be read against is not difficulty, it's a bug,
+    // so the choice is filtered by measured contrast rather than trusted.
+    const legiblePanel = (c: ColorId) =>
+      contrast(INK[ink], panelColor(c)) >= MIN_PANEL_CONTRAST;
+
+    const thirds = COLORS.filter((c) => c !== ink && c !== word && legiblePanel(c));
+    const fallback = COLORS.filter((c) => c !== ink && legiblePanel(c));
+    const choices = thirds.length ? thirds : fallback;
+    panel = choices.length ? pick(choices, rng) : null;
+
+    // The strobe beats the panel between two hues rather than on and off: a
+    // background that flashes to nothing is a luminance strobe, and this game
+    // is not worth giving anyone a seizure over. Two dark tints keep the
+    // luminance swing small and the word legible on both.
+    if (on.has("strobe") && panel) {
+      const others = COLORS.filter(
+        (c) => c !== ink && c !== panel && contrast(INK[ink], panelColor(c)) >= MIN_PANEL_CONTRAST,
+      );
+      panelAlt = others.length ? pick(others, rng) : null;
+    }
   }
 
   // One letter, never the first: the opening letter carries most of the word's
@@ -213,7 +285,7 @@ export function dealRound(score: number, rng: () => number, table: Layer[] = LAY
     hidden.push(1 + Math.floor(rng() * (word.length - 1)));
   }
 
-  return { word, ink, options: shuffle(options, rng), panel, hidden };
+  return { word, ink, options: shuffle(options, rng), panel, panelAlt, hidden };
 }
 
 export function createGame(
