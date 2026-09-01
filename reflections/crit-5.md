@@ -21,12 +21,21 @@ week. The slow fix was the only one that compounded.
 ## What did this work change about who I want to be as a software developer?
 
 I've been treating tests as proof that code works. This week they were cheaper
-than that and also more useful: the rule tests told me the module was right, and
-told me nothing about whether the game was any good. The layout change that
-mattered most came from losing runs at 3am, not from a green suite — the gap
-between the word and the swatches was invisible in every screenshot and obvious
-within ten seconds of play.
+than that and also more useful, and the split turned out to run in both
+directions.
 
-So the thing I want to hold onto is the split. Automate the claims that survive
-a rewrite; go and use the thing for the claims that don't. I'd been quietly
-hoping the first category was bigger than it is.
+Some things only playing could find. Runs kept dying at the same score, and no
+test would ever have told me why — the clock was speeding up on every answer, so
+pressure outran skill inside a tier. The gap between the word and the swatches
+was invisible in every screenshot and obvious ten seconds into a real run.
+
+But the most important defect went the other way, and that's the part that
+changed my mind. I asked what the game does for a colour-blind player and then
+*measured* it instead of squinting at it — two of my colours were 6.8 apart
+under deuteranopia, which is a coin toss, for roughly 8% of men. I cannot
+perceive that. No amount of careful playing would have surfaced it, and I had
+been quietly treating my own eyes as the acceptance criteria. Writing the check
+then caught a bug in my own filter that I'd have shipped otherwise.
+
+So: use the thing for the claims that need a person, and measure the ones where
+being the person is exactly what disqualifies you.
