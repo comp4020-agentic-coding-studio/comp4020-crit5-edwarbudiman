@@ -1,70 +1,69 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+**Ink** is a one-mechanic browser game. A colour word sits in the middle of the
+screen painted in a different colour, and a row of unlabelled swatches sits
+under it. Matching the ink buys time on a clock that never stops; matching the
+word — the thing your eye wants to do — costs it. The payout shrinks as the
+score climbs, so skill extends a run but cannot save it, and the board widens
+from three swatches to five as you get good. The whole design answers one line
+of the brief: no instructions anywhere.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+### 1. The no-tutorial rule decided the interface, not the aesthetics
 
-1. **what happened** --- the problem, or the thing that went wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+My first sketch had three buttons labelled with colour names. Playing that in my
+head, the first move is genuinely ambiguous — *red* on a button could mean the
+word or the ink, and a stranger has no way to tell which game they're in. The
+obvious fix was a one-line hint on the opening screen, which the brief forbids.
+Instead I made the options **solid swatches with no text**, so "pick a colour"
+is the only readable move, and then made the whole interface achromatic —
+graphite ground, neutral type, neutral clock — so the only chroma on screen
+belongs to the game. An accent colour in the chrome would have competed with the
+mechanic for the eye. I checked it by opening the built page cold at 1440×900
+and 500px and asking what a first-time player could possibly do.
+[`81d5aa7`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-edwarbudiman/commit/81d5aa7)
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** --- the standards and checks your work has to satisfy
---- rather than in a retry: a rule added to `CLAUDE.md`, a check wired up, an
-attempt thrown away. Retrying until it passes is the routine case, and changing
-what the work runs against is the skilled one.
+### 2. The sensor that reads the README, and what happened when it cried wolf
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
+"No instructions anywhere, on screen or off" is testable, so I wrote a sensor
+that scans the built page *and* `README.md` for tutorial-shaped copy, because a
+how-to that moves off the screen and into the repo is the loophole the spec
+closes. It went red immediately — on its own filename, quoted in a file list.
+The routine fix is to reword the README. I changed the **sensor** instead, so it
+strips code spans and fenced blocks before matching: a filename is an
+identifier, not an explanation, and a sensor that cries wolf gets deleted within
+a week. It stays as harness for next week; the contract tests in
+`spec/game.test.ts` retire with this brief.
+[`34140c3...81d5aa7`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-edwarbudiman/compare/34140c3...81d5aa7)
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+### 3. The change that only playing could produce
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
+The field was a two-row grid: word centred in the leftover space, swatch row
+near the bottom. It photographs well. It plays badly — on a 900px-tall viewport
+each round costs a look down to the row and back up to the word, and with three
+seconds left that saccade is the difference between answering and not. No test
+could have found this; I found it by losing runs. Both now sit in one centred
+cluster, and on a phone the cluster drops into the thumb's arc instead.
+[`fdc2d59`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-edwarbudiman/commit/fdc2d59)
 
-> the prompt, verbatim
+### 4. A correction that landed in the harness rather than in a retry
 
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
+`pnpm install` failed with `ERR_PNPM_INVALID_WORKSPACE_CONFIGURATION`, which
+reads like a broken repo. It wasn't: the shell's `pnpm` is 8.13.1 while
+`mise.toml` pins 11.9.0, and pnpm 8 demands a `packages:` key pnpm 11 doesn't.
+Rather than remember it, I wrote the diagnosis into `CLAUDE.md` alongside the
+rules carried forward from crit 4, so the next agent in this repo reads it
+before it wastes the same ten minutes.
+[`ed1aa8e`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-edwarbudiman/commit/ed1aa8e)
 
-## Before you ship
+## How I grounded it
 
-`pnpm check:evidence` verifies your citations resolve to real commits, that a
-reflection entry the marker reads is in `reflections/`, and that your
-`CLAUDE.md` is there --- before a marker ever opens the file. It checks that
-your map is traceable, not that it is good: the marker judges whether your
-small, deliberately chosen set of moments shows real judgement and reflection. A
-green check is not a substitute for that curation.
-
-Images aren't checked: unlike a citation whose SHA doesn't resolve, a broken
-image is visible the moment this file is rendered on GitHub.
+The rules live in `game.ts` with no DOM, so the contract tests play real rounds
+without a browser — including the one rule under focused test, that the ink
+scores and the word does not, checked across sixty consecutive rounds. I then
+verified the same rule in Chrome against the live DOM, because a green unit test
+proves the module, not the wiring: a word reading YELLOW in red ink, with the
+yellow swatch pressed, left the score unmoved.
