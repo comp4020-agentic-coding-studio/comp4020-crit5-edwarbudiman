@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * { box-sizing: border-box; margin: 0; }
+      body {
+        width: 1200px; height: 630px; overflow: hidden;
+        background: #191b1f; color: #e9ebee;
+        font-family: "Archivo", sans-serif;
+        display: flex; flex-direction: column;
+      }
+      .clock { height: 10px; background: #212429; flex: none; }
+      .clock i { display: block; height: 100%; width: 67%; background: #e9ebee; }
+      .masthead {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 34px 56px 0;
+      }
+      .wordmark {
+        font-size: 22px; font-weight: 800; letter-spacing: 0.34em;
+        text-transform: uppercase; color: #757c89;
+        font-variation-settings: "wdth" 108;
+      }
+      .score { font-family: "JetBrains Mono", monospace; font-size: 22px; font-weight: 700; }
+      .field {
+        flex: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 54px;
+      }
+      .word {
+        font-size: 190px; font-weight: 900; line-height: 0.9;
+        letter-spacing: -0.02em; text-transform: uppercase;
+        font-variation-settings: "wdth" 118;
+        color: #3d8bff;
+      }
+      .swatches { display: flex; gap: 22px; }
+      .chip { width: 208px; height: 125px; border-radius: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="clock"><i></i></div>
+    <div class="masthead">
+      <span class="wordmark">Ink</span>
+      <span class="score">12</span>
+    </div>
+    <div class="field">
+      <div class="word">Yellow</div>
+      <div class="swatches">
+        <div class="chip" style="background: #FFD400"></div>
+        <div class="chip" style="background: #B06BFF"></div>
+        <div
+          class="chip"
+          style="background: #3d8bff; box-shadow: 0 0 0 8px rgba(61, 139, 255, 0.28)"
+        ></div>
+      </div>
+    </div>
+  </body>
+</html>
