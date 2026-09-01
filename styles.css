@@ -521,7 +521,9 @@ body.is-ready .swatch--hint .swatch__chip {
   .field {
     justify-content: flex-end;
     gap: clamp(1.5rem, 6vh, 3rem);
-    padding-bottom: calc(var(--gutter) * 1.5);
+    /* The bars run to the bottom edge now, so the home indicator on a
+       gesture-nav phone would sit on top of the last one. */
+    padding-bottom: max(calc(var(--gutter) * 1.2), env(safe-area-inset-bottom, 0px));
   }
 
   /* Bigger, but narrower — and sized to the word in hand. A phone runs out of
@@ -541,12 +543,17 @@ body.is-ready .swatch--hint .swatch__chip {
     display: none;
   }
 
-  /* One option per row. Full-width bars are the easiest thing in the world to
-     hit with a thumb, and kept short they still leave the word the space it
-     just took. */
+  /* One option per row, edge to edge. The bars are the only thing on this
+     screen you touch, so they get the bottom of it outright — full bleed past
+     the field's gutter, and tall enough that a thumb never has to aim. */
   .swatches {
     flex-direction: column;
-    gap: 0.6rem;
+    align-self: stretch;
+    /* `width: 100%` from the base rule would beat the stretch and leave the
+       row one gutter short on the right, so the width goes back to auto. */
+    width: auto;
+    margin-inline: calc(var(--gutter) * -1);
+    gap: 0.45rem;
     max-width: none;
   }
 
@@ -557,8 +564,14 @@ body.is-ready .swatch--hint .swatch__chip {
 
   .swatch__chip {
     aspect-ratio: auto;
-    height: clamp(3.1rem, 8vh, 4.5rem);
-    border-radius: 14px;
+    height: clamp(4.5rem, 12vh, 6.5rem);
+    border-radius: 0;
+  }
+
+  /* An outline offset outwards is clipped by the screen edge once the bars
+     are full bleed, so it draws inside instead. */
+  .swatch:focus-visible .swatch__chip {
+    outline-offset: -6px;
   }
 
   /* A stacked bar rises into the bar above it, so the hover/press lift has to
