@@ -10,6 +10,7 @@ import {
   OPTION_COUNT,
   PANEL_TINT,
   START_MS,
+  TIER_SIZE,
   activeLayers,
   answer,
   bonusFor,
@@ -152,6 +153,32 @@ describe("the clock speeds up as you get good", () => {
   it("drains faster at a higher score", () => {
     expect(drainRateFor(20)).toBeGreaterThan(drainRateFor(0));
     expect(drainRateFor(0)).toBe(1);
+  });
+
+  it("holds one speed for a whole tier, then steps", () => {
+    // The point of a tier: ten rounds at a fixed speed you can settle into
+    // and bank time in. Ramping on every answer meant the clock got quicker
+    // mid-tier, pressure outran skill, and runs died at the same score every
+    // time. A player has to be able to feel the change arrive.
+    for (let score = 0; score < TIER_SIZE; score++) {
+      expect(drainRateFor(score), `score ${score} is still tier 0`).toBe(drainRateFor(0));
+      expect(bonusFor(score)).toBe(bonusFor(0));
+    }
+
+    expect(drainRateFor(TIER_SIZE)).toBeGreaterThan(drainRateFor(TIER_SIZE - 1));
+    expect(bonusFor(TIER_SIZE)).toBeLessThan(bonusFor(TIER_SIZE - 1));
+  });
+
+  it("leaves the first two tiers survivable, so 20 isn't a wall", () => {
+    // A round answered at a practised 900ms must not cost more than it pays
+    // before tier 2, or the run is lost to arithmetic rather than to the
+    // player. Measured against the response time the game is actually built
+    // around.
+    const net = (score: number) => bonusFor(score) - 900 * drainRateFor(score);
+
+    expect(net(0)).toBeGreaterThan(0);
+    expect(net(15), "tier 1 should still be winnable at a steady pace").toBeGreaterThan(0);
+    expect(net(60), "and the top must still be unwinnable").toBeLessThan(0);
   });
 
   it("stops accelerating somewhere, so it never becomes unplayable noise", () => {

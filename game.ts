@@ -36,25 +36,36 @@ export const START_MS = 8_000;
 export const MAX_MS = 10_000;
 export const WRONG_PENALTY_MS = 2_000;
 
+/** Difficulty moves in tiers of ten, not on every answer. Ramping
+ *  continuously meant the clock got quicker *inside* a tier, so a good run
+ *  never got a stable stretch to bank time in — the pressure rose faster than
+ *  skill could, and runs died at the same place every time. Stepping it means
+ *  ten rounds at a fixed speed you can settle into, then a jolt you feel. */
+export const TIER_SIZE = 10;
+
+export function tierFor(score: number): number {
+  return Math.floor(score / TIER_SIZE);
+}
+
 const BONUS_START_MS = 1_800;
-const BONUS_DECAY_MS = 55;
+const BONUS_STEP_MS = 300;
 /** Below a practised adult's Stroop response (~700–1100ms), which is what
  *  makes a run finite however good the player gets. */
 export const BONUS_FLOOR_MS = 550;
 
-const DRAIN_ACCEL = 0.045;
+const DRAIN_STEP = 0.25;
 export const DRAIN_CAP = 2.4;
 
 /** What one correct answer buys, at a given score. */
 export function bonusFor(score: number): number {
-  return Math.max(BONUS_FLOOR_MS, BONUS_START_MS - score * BONUS_DECAY_MS);
+  return Math.max(BONUS_FLOOR_MS, BONUS_START_MS - tierFor(score) * BONUS_STEP_MS);
 }
 
 /** How fast the clock empties. The shrinking payout alone is a pressure you
  *  have to do arithmetic to notice; a bar that visibly moves quicker is one
- *  you feel in the first second of a new tier. */
+ *  you feel the moment a tier turns over. */
 export function drainRateFor(score: number): number {
-  return Math.min(DRAIN_CAP, 1 + score * DRAIN_ACCEL);
+  return Math.min(DRAIN_CAP, 1 + tierFor(score) * DRAIN_STEP);
 }
 
 /* --- difficulty layers ---------------------------------------------------- */
