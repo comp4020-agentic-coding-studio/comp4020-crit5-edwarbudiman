@@ -42,9 +42,15 @@
     </header>
 
     <main class="field" id="field">
-      <p class="word" id="word" aria-live="polite" aria-atomic="true"></p>
+      <div class="stage" id="stage">
+        <p class="word" id="word" aria-live="polite" aria-atomic="true"></p>
+      </div>
       <div class="swatches" id="swatches" role="group" aria-label="Colours"></div>
     </main>
+
+    <aside class="records" id="records" hidden>
+      <ol class="records__list" id="records-list"></ol>
+    </aside>
 
     <div class="verdict" id="verdict" hidden>
       <p class="verdict__score" id="verdict-score">0</p>

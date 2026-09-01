@@ -2,7 +2,17 @@
 // turns a Game into pixels and a keypress into an answer.
 
 import * as sound from "./audio";
-import { type ColorId, type Game, INK, MAX_MS, answer, createGame, tick } from "./game";
+import {
+  type ColorId,
+  type Game,
+  INK,
+  MAX_MS,
+  answer,
+  createGame,
+  panelColor,
+  tick,
+} from "./game";
+import { readScores, recordScore } from "./scores";
 
 const el = <T extends HTMLElement>(id: string): T => {
   const found = document.getElementById(id);
@@ -11,6 +21,7 @@ const el = <T extends HTMLElement>(id: string): T => {
 };
 
 const fieldEl = el("field");
+const stageEl = el("stage");
 const wordEl = el("word");
 const swatchesEl = el("swatches");
 const scoreEl = el("score");
@@ -19,10 +30,12 @@ const clockTrack = clockEl.parentElement!;
 const verdictEl = el("verdict");
 const verdictScoreEl = el("verdict-score");
 const againEl = el<HTMLButtonElement>("again");
+const recordsEl = el("records");
+const recordsListEl = el("records-list");
 
 /** Keycaps under each swatch. Position, not colour — the mapping stays put
  *  even though the colours are reshuffled every round. */
-const KEYS = ["1", "2", "3", "4", "5"];
+const KEYS = ["1", "2", "3"];
 
 /** How long the opening board waits before showing the answer once. */
 const HINT_AFTER_MS = 4_000;
@@ -30,6 +43,17 @@ const HINT_AFTER_MS = 4_000;
  *  doesn't immediately start the next one. */
 const RESTART_LOCKOUT_MS = 700;
 
+/** Dev-only: `?score=25` drops you straight into a tier so a difficulty layer
+ *  can be looked at without surviving to it first. Stripped from the build —
+ *  `import.meta.env.DEV` is false in `vite build`, so this cannot ship. */
+function debugScore(): number {
+  if (!import.meta.env.DEV) return 0;
+  const raw = new URLSearchParams(window.location.search).get("score");
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+}
+
+let scores = readScores();
 let game: Game = createGame();
 let lastFrame = performance.now();
 let hintTimer: number | undefined;
@@ -37,13 +61,49 @@ let showHint = false;
 let deadAt = 0;
 let lastTickSecond = Infinity;
 
+/** Applied once at startup so a dev override survives the first render. */
+function seed(g: Game): Game {
+  const forced = debugScore();
+  return forced ? answerless(g, forced) : g;
+}
+
+/** Puts the game at a score without playing it, for the dev override only.
+ *  Runs until the score actually lands rather than counting answers: the
+ *  opening move is free, so N correct answers only reach N-1. */
+function answerless(g: Game, score: number): Game {
+  let next = g;
+  for (let i = 0; i < score + 5 && next.score < score; i++) {
+    next = answer(next, next.round.ink).game;
+  }
+  return { ...next, timeMs: MAX_MS, status: "ready" };
+}
+
+game = seed(game);
+
 /* --- rendering ------------------------------------------------------------ */
+
+function renderWord(): void {
+  const { word, hidden } = game.round;
+  const letters = word.toUpperCase().split("");
+
+  // Letters are spans so one can be hidden without reflowing the rest.
+  wordEl.replaceChildren(
+    ...letters.map((letter, i) => {
+      const span = document.createElement("span");
+      span.textContent = letter;
+      if (hidden.includes(i)) span.className = "gone";
+      return span;
+    }),
+  );
+
+  // The accessible name stays the whole word: a screen reader is not playing
+  // a perception game, and reading it "GR EN" would be nonsense.
+  wordEl.setAttribute("aria-label", word);
+}
 
 function renderSwatches(): void {
   const { options } = game.round;
 
-  // Reuse the buttons when the board hasn't changed size: rebuilding every
-  // round would throw away keyboard focus mid-run.
   if (swatchesEl.children.length !== options.length) {
     swatchesEl.replaceChildren(
       ...options.map((_, i) => {
@@ -74,11 +134,27 @@ function renderSwatches(): void {
   });
 }
 
-function render(): void {
-  const { round, score, status, timeMs } = game;
+function renderRecords(): void {
+  const visible = game.status !== "playing" && scores.length > 0;
+  recordsEl.hidden = !visible;
+  if (!visible) return;
 
-  wordEl.textContent = round.word.toUpperCase();
+  recordsListEl.replaceChildren(
+    ...scores.map((score) => {
+      const item = document.createElement("li");
+      item.textContent = String(score);
+      return item;
+    }),
+  );
+}
+
+function render(): void {
+  const { round, score, status, timeMs, layers } = game;
+
+  renderWord();
   document.body.style.setProperty("--ink", INK[round.ink]);
+  stageEl.style.setProperty("--panel", round.panel ? panelColor(round.panel) : "transparent");
+  stageEl.classList.toggle("stage--drift", layers.has("drift"));
   scoreEl.textContent = String(score);
 
   clockEl.style.setProperty("--fill", String(timeMs / MAX_MS));
@@ -91,6 +167,15 @@ function render(): void {
   verdictScoreEl.textContent = String(score);
 
   renderSwatches();
+  renderRecords();
+}
+
+/** Restarts the glitch animation. Re-adding a class only replays an animation
+ *  if the element is reflowed in between. */
+function replayGlitch(): void {
+  wordEl.classList.remove("word--glitch");
+  void wordEl.offsetWidth;
+  wordEl.classList.add("word--glitch");
 }
 
 function flash(className: string, ms: number): void {
@@ -139,11 +224,13 @@ function respond(index: number): void {
   if (game.status === "over") die();
 
   render();
+  if (game.layers.has("glitch") && game.status === "playing") replayGlitch();
 }
 
 function die(): void {
   deadAt = performance.now();
   clockTrack.classList.remove("clock--urgent");
+  scores = recordScore(game.score);
   sound.over();
   window.setTimeout(() => againEl.focus(), 60);
 }
@@ -151,7 +238,7 @@ function die(): void {
 function restart(): void {
   if (performance.now() - deadAt < RESTART_LOCKOUT_MS) return;
 
-  game = createGame(Math.random, game.best);
+  game = seed(createGame(Math.random, game.best));
   showHint = false;
   lastTickSecond = Infinity;
   lastFrame = performance.now();

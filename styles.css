@@ -181,6 +181,37 @@ body.is-wrong {
   min-height: 0;
 }
 
+/* The stage carries the panel layer and the drift; the word inside carries the
+   glitch. Keeping them on separate elements means two transform animations can
+   run at once without fighting over the same property. */
+.stage {
+  position: relative;
+  padding: 0.06em 0.3em;
+  border-radius: 20px;
+  background: var(--panel, transparent);
+  transition: background-color 220ms ease;
+}
+
+.stage--drift {
+  animation: drift 5.5s ease-in-out infinite;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-15px, 7px) rotate(-0.9deg);
+  }
+  50% {
+    transform: translate(11px, -9px) rotate(0.7deg);
+  }
+  75% {
+    transform: translate(-7px, -5px) rotate(-0.4deg);
+  }
+}
+
 .word {
   margin: 0;
   color: var(--ink);
@@ -193,6 +224,94 @@ body.is-wrong {
   text-align: center;
   user-select: none;
   transition: color 90ms ease;
+}
+
+/* A hidden letter keeps its space. Reflowing the word would move every other
+   letter and turn a missing character into a different-shaped word. */
+.word .gone {
+  visibility: hidden;
+}
+
+/* Horizontal slices only, and never a colour shift: an RGB split would put
+   other hues inside the letters, and "what colour is this?" is the one
+   question the game is not allowed to make ambiguous. */
+.word--glitch {
+  animation: glitch 220ms steps(1, end) 1;
+}
+
+@keyframes glitch {
+  0% {
+    clip-path: inset(0 0 0 0);
+    transform: translateX(0);
+  }
+  14% {
+    clip-path: inset(16% 0 64% 0);
+    transform: translateX(-11px);
+  }
+  28% {
+    clip-path: inset(56% 0 20% 0);
+    transform: translateX(13px);
+  }
+  42% {
+    clip-path: inset(6% 0 82% 0);
+    transform: translateX(-7px);
+  }
+  56% {
+    clip-path: inset(72% 0 6% 0);
+    transform: translateX(9px);
+  }
+  70% {
+    clip-path: inset(34% 0 46% 0);
+    transform: translateX(-5px);
+  }
+  84% {
+    clip-path: inset(48% 0 34% 0);
+    transform: translateX(4px);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    transform: translateX(0);
+  }
+}
+
+/* --- the top three ------------------------------------------------------- */
+
+.records {
+  position: fixed;
+  top: 50%;
+  right: var(--gutter);
+  transform: translateY(-50%);
+  z-index: 7;
+}
+
+.records[hidden] {
+  display: none;
+}
+
+.records__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+  text-align: right;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  color: var(--ash);
+}
+
+/* The best run is the loud one; the rest are context. No labels — three
+   numbers in a column beside a score need no explaining. */
+.records__list li {
+  font-size: 1rem;
+  opacity: 0.5;
+}
+
+.records__list li:first-child {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--chalk);
+  opacity: 1;
 }
 
 /* --- the swatches -------------------------------------------------------- */
@@ -377,6 +496,20 @@ body.is-ready .swatch--hint .swatch__chip {
   body.is-ready .swatch__chip {
     opacity: 1;
     box-shadow: 0 0 0 5px color-mix(in srgb, var(--chip) 26%, transparent);
+  }
+
+  /* Glitch and drift are difficulty, not decoration, so they can't simply be
+     switched off here — a player who needs reduced motion would get an easier
+     game. They become a static tilt and a one-off dim instead: the word is
+     still harder to read, and nothing moves. */
+  .word--glitch {
+    animation: none;
+    opacity: 0.72;
+  }
+
+  .stage--drift {
+    animation: none;
+    transform: translate(-9px, 5px) rotate(-0.8deg);
   }
 }
 
