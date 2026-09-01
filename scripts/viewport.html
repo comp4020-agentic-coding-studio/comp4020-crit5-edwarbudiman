@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ink — viewport rig</title>
+    <style>
+      /* A dev rig, not part of the site. vite.config.ts skips scripts/, so this
+         never reaches dist/. It exists because the OS window manager refuses to
+         shrink a Chrome window below ~500px, which makes the phone breakpoint
+         impossible to look at directly. An iframe has its own viewport, so the
+         media queries inside it fire for real. */
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0d0e11;
+        color: #757c89;
+        font: 12px ui-monospace, monospace;
+        display: flex;
+        gap: 28px;
+        padding: 24px;
+        align-items: flex-start;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        padding-bottom: 8px;
+        letter-spacing: 0.08em;
+      }
+      /* Scaled down so a whole 844px phone fits inside a laptop screenshot.
+         The iframe still LAYS OUT at its real pixel width, so the breakpoints
+         fire exactly as they would on the device. */
+      .shell {
+        transform: scale(0.82);
+        transform-origin: top left;
+      }
+      iframe {
+        border: 1px solid #2f343d;
+        border-radius: 10px;
+        background: #191b1f;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <figure>
+      <figcaption>390 x 844 — iPhone</figcaption>
+      <div class="shell"><iframe src="/" width="390" height="844" title="Ink at 390px"></iframe></div>
+    </figure>
+    <figure>
+      <figcaption>360 x 780 — small Android</figcaption>
+      <div class="shell"><iframe src="/" width="360" height="780" title="Ink at 360px"></iframe></div>
+    </figure>
+  </body>
+</html>

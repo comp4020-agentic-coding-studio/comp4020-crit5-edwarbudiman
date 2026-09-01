@@ -515,15 +515,96 @@ body.is-ready .swatch--hint .swatch__chip {
 
 /* On a phone the cluster stays together, but sits low: the swatches are the
    only thing you touch, and they belong in the thumb's arc, not the middle of
-   the screen. */
+   the screen. This block comes last on purpose — it overrides the
+   `pointer: coarse` chip shape above, and on a real phone both match. */
 @media (max-width: 34rem) {
   .field {
     justify-content: flex-end;
-    gap: clamp(2.5rem, 12vh, 6rem);
-    padding-bottom: calc(var(--gutter) * 2.6);
+    gap: clamp(1.5rem, 6vh, 3rem);
+    padding-bottom: calc(var(--gutter) * 1.5);
   }
 
+  /* Bigger, but narrower — and sized to the word in hand. A phone runs out of
+     WIDTH long before height, so one vw size for every word means RED is set
+     to whatever ORANGE can survive, and the short names end up tiny for no
+     reason. --len comes from the render layer; the divisor is the measured
+     advance width of this face at wdth 92, plus the panel's own padding. */
+  .word {
+    font-size: min(7rem, calc(92vw / (var(--len, 6) * 0.78 + 0.6)));
+    font-variation-settings: "wdth" 92;
+  }
+
+  /* Stacked bars put the keycap between two chips, where it reads as a stray
+     number rather than a label. A screen this narrow is a phone; the digits
+     still work if a keyboard is attached, they just aren't drawn. */
+  .swatch__key {
+    display: none;
+  }
+
+  /* One option per row. Full-width bars are the easiest thing in the world to
+     hit with a thumb, and kept short they still leave the word the space it
+     just took. */
   .swatches {
-    gap: 0.7rem;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-width: none;
+  }
+
+  .swatch {
+    width: 100%;
+    flex: none;
+  }
+
+  .swatch__chip {
+    aspect-ratio: auto;
+    height: clamp(3.1rem, 8vh, 4.5rem);
+    border-radius: 14px;
+  }
+
+  /* A stacked bar rises into the bar above it, so the hover/press lift has to
+     be gentler than it is on the desktop row. */
+  .swatch:hover .swatch__chip,
+  .swatch:focus-visible .swatch__chip {
+    transform: translateY(-3px);
+  }
+
+  /* Drift would walk a condensed word off a 390px screen at the desktop
+     amplitude. */
+  @keyframes drift {
+    0%,
+    100% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+      transform: translate(-6px, 5px) rotate(-0.9deg);
+    }
+    50% {
+      transform: translate(5px, -6px) rotate(0.7deg);
+    }
+    75% {
+      transform: translate(-3px, -3px) rotate(-0.4deg);
+    }
+  }
+
+  /* The side rail has nowhere to sit beside full-width bars, so the records
+     become a strip under the masthead instead. */
+  .records {
+    top: 3.3rem;
+    right: var(--gutter);
+    transform: none;
+  }
+
+  .records__list {
+    grid-auto-flow: column;
+    align-items: baseline;
+    gap: 0.55rem;
+  }
+
+  .records__list li {
+    font-size: 0.85rem;
+  }
+
+  .records__list li:first-child {
+    font-size: 1.15rem;
   }
 }

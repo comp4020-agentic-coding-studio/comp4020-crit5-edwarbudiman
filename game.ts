@@ -75,10 +75,10 @@ export interface Layer {
  *  well make the game EASIER, because a word you can't read can't fight you,
  *  and this table is how it gets cut in one edit if playing proves that. */
 export const LAYERS: Layer[] = [
-  { id: "glitch", from: 10, enabled: true },
-  { id: "panel", from: 20, enabled: true },
-  { id: "letters", from: 30, enabled: true },
-  { id: "drift", from: 40, enabled: true },
+  { id: "glitch", from: 5, enabled: true },
+  { id: "panel", from: 6, enabled: true },
+  { id: "letters", from: 7, enabled: true },
+  { id: "drift", from: 8, enabled: true },
 ];
 
 export function activeLayers(score: number, table: Layer[] = LAYERS): Set<LayerId> {

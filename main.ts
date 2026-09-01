@@ -96,6 +96,11 @@ function renderWord(): void {
     }),
   );
 
+  // Lets the phone breakpoint size the type to this word's length instead of
+  // to the longest word in the palette. Harmless on desktop, which uses a
+  // fixed clamp.
+  wordEl.style.setProperty("--len", String(letters.length));
+
   // The accessible name stays the whole word: a screen reader is not playing
   // a perception game, and reading it "GR EN" would be nonsense.
   wordEl.setAttribute("aria-label", word);
