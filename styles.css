@@ -166,12 +166,18 @@ body.is-wrong {
 
 /* --- the field ----------------------------------------------------------- */
 
+/* Word and swatches are one cluster, not two things at opposite ends of the
+   screen. Playing it with the row pinned to the bottom of a 900px viewport,
+   every round cost a long look down and back — at three seconds left that
+   saccade is the difference between answering and not. Centring the pair and
+   holding the gap tight keeps both inside one glance. */
 .field {
-  display: grid;
-  grid-template-rows: 1fr auto;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-items: center;
-  padding: 0 var(--gutter) calc(var(--gutter) * 1.4);
+  justify-content: center;
+  gap: clamp(1.75rem, 5vh, 3.5rem);
+  padding: 0 var(--gutter) var(--gutter);
   min-height: 0;
 }
 
@@ -374,10 +380,14 @@ body.is-ready .swatch--hint .swatch__chip {
   }
 }
 
+/* On a phone the cluster stays together, but sits low: the swatches are the
+   only thing you touch, and they belong in the thumb's arc, not the middle of
+   the screen. */
 @media (max-width: 34rem) {
   .field {
-    grid-template-rows: 1fr auto;
-    padding-bottom: calc(var(--gutter) * 2);
+    justify-content: flex-end;
+    gap: clamp(2.5rem, 12vh, 6rem);
+    padding-bottom: calc(var(--gutter) * 2.6);
   }
 
   .swatches {
